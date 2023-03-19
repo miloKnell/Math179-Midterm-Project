@@ -1,12 +1,12 @@
 # %%
-file = "Downloads/Electronics_5.json.gz"
+#file = "Downloads/Electronics_5.json.gz"
 
-import gzip
-import json
-def parse(path):
-  g = gzip.open(path, 'r')
-  for l in g:
-    yield json.loads(l)
+#import gzip
+#import json
+#def parse(path):
+#  g = gzip.open(path, 'r')
+#  for l in g:
+#    yield json.loads(l)
 
 # %%
 from nela import NELAFeatureExtractor
