@@ -5,8 +5,6 @@ import gzip
 import json
 import pandas as pd
 import numpy as np
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
 import gensim
 import nltk
 from nltk.tokenize import word_tokenize
@@ -27,14 +25,16 @@ def getDF(path):
   for d in parse(path):
     df[i] = d
     i += 1
+    if i == 10000:
+        break
   return pd.DataFrame.from_dict(df, orient='index')
 
-df = getDF(file)
+david_df = getDF(file)
 #%%
-filter_df = df[:10000]
+david_df = david_df[:10000]
 # REMOVE: only use first 10k reviews
-filter_df = filter_df[['reviewText', 'overall']]
-filter_df = filter_df.dropna()
+david_df = david_df[['reviewText', 'overall']]
+david_df = david_df.dropna()
 # %%
 # import urllib.request
 # import os
@@ -44,17 +44,17 @@ filter_df = filter_df.dropna()
 #     urllib.request.urlretrieve("http://nlp.stanford.edu/data/glove.6B.zip", "glove.6B.zip")
 # %%
 # Lowercase the text
-filter_df['reviewText'] = filter_df['reviewText'].str.lower()
+david_df['reviewText'] = david_df['reviewText'].str.lower()
 
 # Tokenize the text
-filter_df['reviewText'] = filter_df['reviewText'].apply(word_tokenize)
+david_df['reviewText'] = david_df['reviewText'].apply(word_tokenize)
 
 # Remove stop words
 stop_words = set(stopwords.words('english'))
-filter_df['reviewText'] = filter_df['reviewText'].apply(lambda x: [word for word in x if word not in stop_words])
+david_df['reviewText'] = david_df['reviewText'].apply(lambda x: [word for word in x if word not in stop_words])
 
 # Join the tokens back into sentences
-filter_df['reviewText'] = filter_df['reviewText'].apply(lambda x: ' '.join(x))
+david_df['reviewText'] = david_df['reviewText'].apply(lambda x: ' '.join(x))
 # %%
 # Load GloVe embeddings
 word_vectors = gensim.models.KeyedVectors.load_word2vec_format('glove.6B.100d.txt', binary=False, no_header=True)
@@ -76,7 +76,7 @@ def get_avg_word_vectors(reviews, word_vectors):
     return review_vectors
   
 # Calculate the average word vectors for each review
-reviews = filter_df['reviewText'].tolist()
+reviews = david_df['reviewText'].tolist()
 # assert reviews has no nan
 assert not any(pd.isnull(reviews))
 review_vectors = get_avg_word_vectors(reviews, word_vectors)
@@ -88,10 +88,12 @@ df_vectors = pd.DataFrame(review_vectors)
 df_vectors.columns = ['feature_' + str(col) for col in df_vectors.columns]
 
 # Concatenate with original dataframe
-df_final = pd.concat([filter_df, df_vectors], axis=1)
+df_final = pd.concat([david_df, df_vectors], axis=1)
 
 # drop nan
 df_final = df_final.dropna()
+# export review vectors
+df_final.to_csv('review_vectors.csv')
 
 # %%
 import matplotlib.pyplot as plt
@@ -125,7 +127,7 @@ pca = PCA(n_components=3)
 embedding_pca = pca.fit_transform(review_vectors)
 
 # Get the star ratings for each review
-ratings = filter_df['overall'].tolist()
+ratings = david_df['overall'].tolist()
 
 # Create a scatter plot of the embeddings, with different colors for each rating
 plt.figure(figsize=(10, 8))
@@ -145,8 +147,9 @@ bad_pca = pca.fit_transform(bad_vectors)
 
 # Create a scatter plot of the embeddings, with different colors for good and bad reviews
 plt.figure(figsize=(10, 8))
-plt.scatter(good_pca[:, 0], good_pca[:, 1], c='green', label='good reviews')
-plt.scatter(bad_pca[:, 0], bad_pca[:, 1], c='red', label='bad reviews')
+plt.scatter(good_pca[:, 0], good_pca[:, 1], c='blue', label='Good Reviews')
+plt.scatter(bad_pca[:, 0], bad_pca[:, 1], c='red', label='Bad Reviews')
+plt.title('PCA Visualization of GloVe Embeddings')
 plt.legend()
 plt.show()
 # %%
