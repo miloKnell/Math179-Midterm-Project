@@ -1,14 +1,4 @@
 # %%
-<<<<<<< Updated upstream
-#file = "Downloads/Electronics_5.json.gz"
-
-#import gzip
-#import json
-#def parse(path):
-#  g = gzip.open(path, 'r')
-#  for l in g:
-#    yield json.loads(l)
-=======
 file = "Toys_and_Games_5.json.gz"
 
 import gzip
@@ -20,7 +10,6 @@ def parse(path):
   g = gzip.open(path, 'r')
   for l in g:
     yield json.loads(l)
->>>>>>> Stashed changes
 
 
 def getDF(path):
