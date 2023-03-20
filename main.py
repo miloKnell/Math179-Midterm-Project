@@ -1,4 +1,5 @@
 # %%
+<<<<<<< Updated upstream
 #file = "Downloads/Electronics_5.json.gz"
 
 #import gzip
@@ -7,7 +8,30 @@
 #  g = gzip.open(path, 'r')
 #  for l in g:
 #    yield json.loads(l)
+=======
+file = "Toys_and_Games_5.json.gz"
 
+import gzip
+import json
+import pandas as pd
+
+
+def parse(path):
+  g = gzip.open(path, 'r')
+  for l in g:
+    yield json.loads(l)
+>>>>>>> Stashed changes
+
+
+def getDF(path):
+  i = 0
+  df = {}
+  for d in parse(path):
+    df[i] = d
+    i += 1
+  return pd.DataFrame.from_dict(df, orient='index')
+
+df = getDF(file)
 # %%
 from nela import NELAFeatureExtractor
 
@@ -16,34 +40,43 @@ from transformers import BertModel, BertTokenizer, AdamW
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 
-text = ['This is the best novel I have read in 2 or 3 years.  It is everything that fiction should be -- beautifully written, engaging, well-plotted and structured.  It has several layers of meanings -- historical, family,  philosophical and more -- and blends them all skillfully and interestingly.  It makes the American grad student/writers\' workshop "my parents were  mean to me and then my professors were mean to me" trivia look  childish and silly by comparison, as they are.\nAnyone who says this is an  adolescent girl\'s coming of age story is trivializing it.  Ignore them.  Read this book if you love literature.\nI was particularly impressed with  this young author\'s grasp of the meaning and texture of the lost world of  French Algeria in the 1950\'s and \'60\'s...particularly poignant when read in  1999 from another ruined and abandoned French colony, amid the decaying  buildings of Phnom Penh...\nI hope the author will write many more books  and that her publishers will bring her first novel back into print -- I  want to read it.  Thank you, Ms. Messud, for writing such a wonderful work.', "HELLO WORLD"]
+filter_df = df[["overall", "reviewText"]].dropna()
+text = filter_df.reviewText[:10**5]
 
-def horne(text):
-    nela = NELAFeatureExtractor()
-    out = []
-    for t in text:
-        feature_vector, _ = nela.extract_all(text[0])
-        out.append(feature_vector)
-    return np.array(out)
+# def horne(text):
+# nela = NELAFeatureExtractor()
+# out = []
+# for i,t in enumerate(text):
+#     if i % 1000 == 0:
+#        print(i)
+#     try:
+#         feature_vector, _ = nela.extract_all(t)
+#         out.append(feature_vector)
+#     except:
+#        print("HIT ERROR ON", i)
+# out = np.array(out)
 
 
-def bert(text):
-    device = torch.device('cuda')
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    model = BertModel.from_pretrained("bert-base-uncased").to(device)
+# def bert(text):
+device = torch.device('cuda')
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+model = BertModel.from_pretrained("bert-base-uncased").to(device)
 
-    out = []
-    model.eval()
-    with torch.no_grad():
-        for t in text:
-            inputs = tokenizer(t, return_tensors="pt").to(device)
-            _, output = model(**inputs).to_tuple()
-            out.append(output.cpu())
+out = []
+model.eval()
+with torch.no_grad():
+    for i,t in enumerate(text):
+        if i % 1000 == 0:
+            print(i)
+        inputs = tokenizer(t, return_tensors="pt").to(device)
+        _, output = model(**inputs).to_tuple()
+        out.append(output.cpu())
 
-    out = np.vstack(out)
+out = np.vstack(out)
     return out
 
-a,b = horne(text), bert(text)
+#horne_feats = horne(df.reviewText)
+#bert_feats = bert(df.reviewText)
 
 
 # %%
