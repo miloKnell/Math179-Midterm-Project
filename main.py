@@ -78,14 +78,39 @@ out = np.array(out)
 
 
 # %%
+file_X = "10k_horne_X.csv"
+file_y = "10k_horne_y.csv"
+
+X = pd.DataFrame(np.loadtxt(file_X, delimiter=","))
+y = np.loadtxt(file_y, delimiter=",")
+X["y"] = y
+filter_X = X[X["y"] != 3]
+filter_X["y"] = filter_X["y"].replace({1.0:0, 2.0:0, 4.0:1, 5.0:1}).astype(int)
+X = filter_X[pd.RangeIndex(start=0, stop=123, step=1)]
+y = filter_X["y"]
+
+
+# %%
+# GLOVE STUFF
+# X = pd.read_csv("review_vectors.csv")
+# X = X.rename({"overall":"y"}, axis=1)
+# X = X.drop(columns=["Unnamed: 0"])
+# filter_X = X[X["y"] != 3]
+# filter_X["y"] = filter_X["y"].replace({1.0:0, 2.0:0, 4.0:1, 5.0:1}).astype(int)
+# y = filter_X["y"]
+# X = filter_X.drop(columns=["y"])
+
+# %%
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, f1_score
+import matplotlib.pyplot as plt
 
 scalar = StandardScaler()
-x_trans = scalar.fit_transform(out)
+x_trans = scalar.fit_transform(X)
 X_train, X_test, y_train, y_test = train_test_split(x_trans, y, test_size=0.2, random_state=42)
 
 svc = LinearSVC(C=1)
@@ -93,3 +118,7 @@ svc = LinearSVC(C=1)
 svc.fit(X_train, y_train)
 pred = svc.predict(X_test)
 acc = sum(pred==y_test)/len(pred)
+f1 = f1_score(y_test, pred)
+mat = confusion_matrix(y_test, pred)
+ConfusionMatrixDisplay(mat).plot()
+plt.show()
