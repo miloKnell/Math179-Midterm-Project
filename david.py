@@ -92,8 +92,12 @@ df_final = pd.concat([david_df, df_vectors], axis=1)
 
 # drop nan
 df_final = df_final.dropna()
-# export review vectors
-df_final.to_csv('review_vectors.csv')
+# export review vectors without reviewText column
+# drop reviewText column
+df_export = df_final.drop(columns=['reviewText'])
+df_export.to_csv('review_vectors.csv')
+
+
 
 # %%
 import matplotlib.pyplot as plt
@@ -123,7 +127,7 @@ plt.show()
 from sklearn.decomposition import PCA
 
 # Perform PCA to reduce the dimensionality of the word embeddings
-pca = PCA(n_components=3)
+pca = PCA(n_components=2)
 embedding_pca = pca.fit_transform(review_vectors)
 
 # Get the star ratings for each review
@@ -141,7 +145,7 @@ plt.show()
 good_vectors = [v for v, r in zip(review_vectors, ratings) if r >= 4]
 bad_vectors = [v for v, r in zip(review_vectors, ratings) if r <= 2]
 
-pca = PCA(n_components=3)
+pca = PCA(n_components=2)
 good_pca = pca.fit_transform(good_vectors)
 bad_pca = pca.fit_transform(bad_vectors)
 
