@@ -19,13 +19,13 @@ def parse(path):
     yield json.loads(l)
 
 
-def getDF(path):
+def getDF(path, num_rows=None):
   i = 0
   df = {}
   for d in parse(path):
     df[i] = d
     i += 1
-    if i == 10000:
+    if num_rows is not None and i == num_rows:
         break
   return pd.DataFrame.from_dict(df, orient='index')
 
