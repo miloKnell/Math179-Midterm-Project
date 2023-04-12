@@ -66,7 +66,7 @@ for rating in df['overall'].unique():
     df_rating_downsampled = resample(df_rating, replace=False, n_samples=min_count, random_state=42)
     df_balanced = pd.concat([df_balanced, df_rating_downsampled])
 
-df = df_balanced
+df = df_balanced.reset_index(drop=True)
 # plot bar chat of value_counts, sort reviews by rating
 # df['overall'].value_counts().sort_index().plot(kind='bar')
 print(df['overall'].value_counts().sort_index())
@@ -112,7 +112,7 @@ review_vectors = get_avg_word_vectors(reviews, word_vectors)
 df_vectors = pd.DataFrame(review_vectors)
 
 # Rename columns
-df_vectors.columns = ['feature_' + str(col) for col in df_vectors.columns]
+df_vectors.columns = [f'feature_{str(col)}' for col in df_vectors.columns]
 
 # Concatenate with original dataframe
 df_final = pd.concat([df, df_vectors], axis=1)
