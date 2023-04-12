@@ -9,6 +9,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.utils import resample
 from sklearn.metrics import accuracy_score
+from sklearn.multiclass import OneVsRestClassifier, OneVsOneClassifier
+from sklearn.metrics import classification_report
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from pathlib import Path
@@ -34,7 +36,7 @@ def getDF(path, num_rows=None):
         break
   return pd.DataFrame.from_dict(df, orient='index')
 
-df = getDF(file, num_rows=1000)
+df = getDF(file, num_rows=10000)
 # %%
 # Grab reviewText and overall rating, drop NaNs
 df = df[['reviewText', 'overall']]
@@ -120,16 +122,16 @@ df_final = pd.concat([df, df_vectors], axis=1)
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(df_final.drop(['reviewText', 'overall'], axis=1), df_final['overall'], test_size=0.2, random_state=42)
 
-# Create an instance of the SVM classifier
-svm = SVC(kernel='linear', decision_function_shape='ovo')
+# %%
+# Train and test an OVR SVM classifier
+ovr_clf = OneVsRestClassifier(SVC(kernel='linear'))
+ovr_clf.fit(X_train, y_train)
+y_pred_ovr = ovr_clf.predict(X_test)
+print('OVR classification report:\n', classification_report(y_test, y_pred_ovr))
 
-# Train the SVM on the training data
-svm.fit(X_train, y_train)
-
-# Test the SVM on the testing data
-y_pred = svm.predict(X_test)
-
-# Evaluate the performance of the SVM
-accuracy = accuracy_score(y_test, y_pred)
-print('Accuracy:', accuracy)
+# Train and test an OVO SVM classifier
+ovo_clf = OneVsOneClassifier(SVC(kernel='linear'))
+ovo_clf.fit(X_train, y_train)
+y_pred_ovo = ovo_clf.predict(X_test)
+print('OVO classification report:\n', classification_report(y_test, y_pred_ovo))
 # %%
