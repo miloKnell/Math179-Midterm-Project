@@ -41,7 +41,7 @@ from torch.utils.data import TensorDataset, DataLoader
 
 
 filter_df = df[["overall", "reviewText"]].dropna()
-n = 10**4
+n = 10**2
 text = filter_df.reviewText[:n]
 y_vars = filter_df.overall[:n]
 
