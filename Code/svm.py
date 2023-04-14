@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.utils import resample
 from sklearn.multiclass import OneVsRestClassifier, OneVsOneClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -41,7 +42,7 @@ def getDF(path, num_rows=None):
             break
     return pd.DataFrame.from_dict(df, orient='index')
 
-df = getDF(file, num_rows=100000)
+df = getDF(file, num_rows=10000)
 # %%
 # Grab reviewText and overall rating, drop NaNs
 df = df[['reviewText', 'overall']]
@@ -120,6 +121,11 @@ df_vectors.columns = [f'feature_{str(col)}' for col in df_vectors.columns]
 
 # Concatenate with original dataframe
 df = pd.concat([df, df_vectors], axis=1)
+
+#%%
+# Export to csv
+df.to_csv(Path('.') / 'data' / 'glove_vectors.csv', index=False)
+
 # %%
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(df.drop(['reviewText', 'overall'], axis=1), df['overall'], test_size=0.2, random_state=42)
@@ -157,4 +163,10 @@ clf = OrdClass(SVC,clf_args={'kernel':'linear', 'probability':True})
 clf.fit(X_train, y_train_ord)
 y_pred_ord = clf.predict(X_test)
 print('Ordinal classification report:\n', classification_report(y_test_ord, y_pred_ord))
+# %%
+# Multinomial log reg
+logreg = LogisticRegression(multi_class='multinomial', solver='lbfgs')
+logreg.fit(X_train, y_train)
+y_pred_logreg = logreg.predict(X_test)
+print('Logistic regression classification report:\n', classification_report(y_test, y_pred_logreg))
 # %%
