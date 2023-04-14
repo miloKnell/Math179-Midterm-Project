@@ -13,7 +13,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-from mord import OrdinalRidge
+from mord import OrdinalRidge, LogisticAT, LogisticIT
 from pathlib import Path
 from OrdClass import OrdClass
 
@@ -149,10 +149,8 @@ ord_reg = OrdinalRidge()
 ord_reg.fit(X_train, y_train)
 
 y_pred_ord = ord_reg.predict(X_test)
-
 print('Mord OrdinalRidge classification report:\n', classification_report(y_test, y_pred_ord))
 
-# %%
 
 # %%
 # convert y values to start from 0 (0 -> 4) and convert to int from float
@@ -170,3 +168,5 @@ logreg.fit(X_train, y_train)
 y_pred_logreg = logreg.predict(X_test)
 print('Logistic regression classification report:\n', classification_report(y_test, y_pred_logreg))
 # %%
+# Ordinal Log Reg Statsmodel
+# https://www.statsmodels.org/stable/generated/statsmodels.discrete.discrete_model.OrdinalResults.h
