@@ -14,10 +14,20 @@ import os
 import itertools
 from scipy.stats.distributions import chi2
 from scipy.stats.distributions import norm
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+import os
+os.chdir(os.path.join("..", ".."))
 
 #old: die_hos_speed.csv
-df = pd.read_csv("die_hos_speed_clean.csv")
-y = ""
+raw_feats = pd.read_csv("100_raw_info.csv")
+data = pd.DataFrame(np.loadtxt("100_bert_feats.csv"))
+df = pd.concat([raw_feats, data], axis=1)
+df = df.drop(columns=["Unnamed: 0", "raw_text"])
+
+y = "stars"
+df.columns = ["feat_"+str(c) if c!= y else c for c in df.columns]
 x = list(df.columns)
 x.remove(y)
 
@@ -94,15 +104,9 @@ def bash_interaction(good_cols):
     return " + ".join(q)
 
 
-def run(y, speed_subset, og_df, reg=True, grouped=False):
-    if speed_subset == 2:
-        df = og_df
-    else:
-        df = og_df[(og_df["SPEED"]==speed_subset)]
-
-    df = df.reset_index()
+def run(y, df, reg=True, grouped=False):
     formula = y + " ~ " + " + ".join(x)# + " + " + bash_interaction(x[:4])
-    mod = smf.logit(formula=formula, data=df)
+    mod = smf.mnlogit(formula=formula, data=df)
     if reg:
         res = mod.fit_regularized(method="l1", disp=0)
     else:
@@ -110,10 +114,9 @@ def run(y, speed_subset, og_df, reg=True, grouped=False):
     significant_vars = res.pvalues[res.pvalues < 0.05].index
     if 'Intercept' in significant_vars:
         significant_vars = significant_vars.drop('Intercept')
-    percents = [(name, np.exp(res.params[name])-1) for   name in significant_vars]
+    percents = [(name, np.exp(res.params[name])-1) for name in significant_vars]
     percents.sort(key = lambda x: abs(x[1]), reverse=True)
-    subset_name = ["non-fwy", "fwy", "both"]
-    plt.title(f"Torndo Plot for {y} on {subset_name[speed_subset]}")
+    plt.title(f"Torndo Plot for {y}")
     sns.barplot(x=[z[1] for z in percents], y=[z[0] for z in percents], orient='h')
     print("Psudo R2", res._results.prsquared)
 
@@ -124,3 +127,13 @@ def run(y, speed_subset, og_df, reg=True, grouped=False):
         print("HOSMER", Hosmer_Lemeshow(res))
 
     return res
+
+def run_split(df, y_var):
+    df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)
+    res = run(y_var, df_train, reg=True, grouped=False)
+    yhat = res.predict(df_test)
+    acc = accuracy_score(yhat, df_test[y_var])
+    print(acc)
+
+
+res = run(y, df)
