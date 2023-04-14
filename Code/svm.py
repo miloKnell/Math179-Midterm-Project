@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import gensim
 import nltk
+import statsmodels.graphics.api as smg
+import statsmodels.formula.api as smf
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.utils import resample
@@ -16,6 +18,10 @@ from nltk.corpus import stopwords
 from mord import OrdinalRidge, LogisticAT, LogisticIT
 from pathlib import Path
 from OrdClass import OrdClass
+from sklearn.metrics import accuracy_score
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -42,11 +48,25 @@ def getDF(path, num_rows=None):
             break
     return pd.DataFrame.from_dict(df, orient='index')
 
-df = getDF(file, num_rows=10000)
 # %%
+# word vectors
+df = getDF(file, num_rows=100000)
 # Grab reviewText and overall rating, drop NaNs
 df = df[['reviewText', 'overall']]
 df = df.dropna()
+
+# %%
+# Load in BERT features
+data_path = Path('.') / 'data'
+raw_feats = pd.read_csv(data_path / "100_raw_info.csv")
+data = pd.DataFrame(np.loadtxt(data_path / "100_bert_feats.csv"))
+df = pd.concat([raw_feats, data], axis=1)
+df = df.drop(columns=["Unnamed: 0"])
+# rename stars col to overall
+df = df.rename(columns={"stars": "overall"})
+# rename rawText to reviewText
+df = df.rename(columns={"raw_text": "reviewText"})
+df.columns = ["feat_"+str(c) if c not in ['reviewText', 'overall'] else c for c in df.columns]
 
 #%%
 # # Undersample 4, 5 star reviews -> more balanced
@@ -124,7 +144,7 @@ df = pd.concat([df, df_vectors], axis=1)
 
 #%%
 # Export to csv
-df.to_csv(Path('.') / 'data' / 'glove_vectors.csv', index=False)
+df.to_csv(Path('.') / 'data' / 'glove_vectors_100k.csv', index=False)
 
 # %%
 # Split the data into training and testing sets
@@ -168,5 +188,45 @@ logreg.fit(X_train, y_train)
 y_pred_logreg = logreg.predict(X_test)
 print('Logistic regression classification report:\n', classification_report(y_test, y_pred_logreg))
 # %%
-# Ordinal Log Reg Statsmodel
-# https://www.statsmodels.org/stable/generated/statsmodels.discrete.discrete_model.OrdinalResults.h
+# Multinomial log reg
+def run(y, df, reg=True, grouped=False):
+    formula = y + " ~ " + " + ".join(x) # + " + " + bash_interaction(x[:4])
+    mod = smf.mnlogit(formula=formula, data=df)
+    res = None
+    if reg:
+        res = mod.fit_regularized(method="l1", disp=0)
+    else:
+        res = mod.fit(method="bfgs", maxiter=1000)
+    # significant_vars = res.pvalues[res.pvalues < 0.05].index
+    # if 'Intercept' in significant_vars:
+    #     significant_vars = significant_vars.drop('Intercept')
+    # percents = [(name, np.exp(res.params[name])-1) for name in significant_vars]
+    # percents.sort(key = lambda x: abs(x[1]), reverse=True)
+    # plt.title(f"Torndo Plot for {y}")
+    # sns.barplot(x=[z[1] for z in percents], y=[z[0] for z in percents], orient='h')
+    print("Psudo R2", res._results.prsquared)
+
+    # print("LINK", link_test(res))
+    # if grouped:
+    #     print("PEARSON", standard_pearson(res, df))
+    # else:
+    #     print("HOSMER", Hosmer_Lemeshow(res))
+
+    return res
+
+def run_split(df, y_var):
+    df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)
+    res = run(y_var, df_train, reg=False, grouped=False)
+    yhat = res.predict(df_test)
+    yhat = yhat.idxmax(axis=1)
+    yhat = yhat + 1
+    yhat = yhat.astype(int)
+    y_test = df_test[y_var]
+    print(classification_report(y_test, yhat))
+
+x = df.drop(['reviewText', 'overall'], axis=1).columns
+# make sure x is str
+y = 'overall'
+# res = run(y, df, reg=False)
+run_split(df, y)
+# %%
