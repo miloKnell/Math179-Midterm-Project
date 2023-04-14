@@ -58,7 +58,7 @@ def bert_single(model, t):
 
 
 
-target = 100
+target = 1000
 star_count = {x:0 for x in range(1,6)}
 stars = []
 bert_feats = []
@@ -73,7 +73,7 @@ model = BertModel.from_pretrained("bert-base-uncased").to(device)
 model.eval()
 
 for i,(t,y) in enumerate(zip(text,y_vars)):
-    if i % 100 == 0:
+    if i % 1000 == 0:
        print(i)
        print(star_count)
     horne = horne_single(nela, t)
