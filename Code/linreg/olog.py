@@ -20,7 +20,7 @@ from sklearn.model_selection import train_test_split
 import os
 os.chdir(os.path.join("..", ".."))
 
-
+#specifiy dataset, then read in appropriate data
 data = "bert"
 
 if data == "glove":
@@ -41,13 +41,14 @@ elif data == "bert":
     x = list(df.columns)
     x.remove(y)
 # %%
+#run main regression on all x variables
 def run(y, df):
-    #formula = y + " ~ " + " + ".join(x)
-    formula = y + " ~ " + " + ".join(x[:300])
+    formula = y + " ~ " + " + ".join(x)
     mod = OrderedModel.from_formula(formula, data=df, distr="logit")
     res = mod.fit(method='bfgs', disp=False)
     return res
 
+#train/test split
 def run_split(df, y_var):
     df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)
     res = run(y_var, df_train)
