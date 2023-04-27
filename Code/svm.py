@@ -50,24 +50,45 @@ def getDF(path, num_rows=None):
 
 # %%
 # word vectors
-df = getDF(file, num_rows=100000)
+df = getDF(file, num_rows=300000)
 # Grab reviewText and overall rating, drop NaNs
 df = df[['reviewText', 'overall']]
 df = df.dropna()
+#%%
+df['reviewLens'] = df['reviewText'].apply(lambda x: len(x.split()))
+print(df['reviewLens'].describe())
+# remove reviews less than 12 words
+df = df[df['reviewLens'] >= 12]
+# drop reviewLen
+df = df.drop(columns=['reviewLens'])
 
 # %%
-# Load in BERT features
-data_path = Path('.') / 'data'
-raw_feats = pd.read_csv(data_path / "100_raw_info.csv")
-data = pd.DataFrame(np.loadtxt(data_path / "100_bert_feats.csv"))
-df = pd.concat([raw_feats, data], axis=1)
-df = df.drop(columns=["Unnamed: 0"])
-# rename stars col to overall
-df = df.rename(columns={"stars": "overall"})
-# rename rawText to reviewText
-df = df.rename(columns={"raw_text": "reviewText"})
-df.columns = ["feat_"+str(c) if c not in ['reviewText', 'overall'] else c for c in df.columns]
+# Load in BERT/NELA embeddings
+def load_bert_nela(bert=True):
+    data_path = Path('.') / 'data'
+    if bert:
+        raw_feats = pd.read_csv(data_path / "1000_raw_info.csv")
+        data = pd.DataFrame(np.loadtxt(data_path / "1000_bert_feats.csv"))
+        df = pd.concat([raw_feats, data], axis=1)
+        df = df.drop(columns=["Unnamed: 0"])
+        # rename stars col to overall
+        df = df.rename(columns={"stars": "overall"})
+        # rename rawText to reviewText
+        df = df.rename(columns={"raw_text": "reviewText"})
+        df.columns = ["feat_"+str(c) if c not in ['reviewText', 'overall'] else c for c in df.columns]
+    else:
+        raw_feats = pd.read_csv(data_path / "1000_raw_info.csv")
+        data = pd.DataFrame(np.loadtxt(data_path / "1000_horne_feats.csv"))
+        df = pd.concat([raw_feats, data], axis=1)
+        df = df.drop(columns=["Unnamed: 0"])
+        # rename stars col to overall
+        df = df.rename(columns={"stars": "overall"})
+        # rename rawText to reviewText
+        df = df.rename(columns={"raw_text": "reviewText"})
+        
+    return df
 
+df = load_bert_nela(bert=False)
 #%%
 # # Undersample 4, 5 star reviews -> more balanced
 # # Make sum of 4, 5 star reviews equal to sum of 1, 2, 3 star reviews
@@ -144,7 +165,7 @@ df = pd.concat([df, df_vectors], axis=1)
 
 #%%
 # Export to csv
-df.to_csv(Path('.') / 'data' / 'glove_vectors_100k.csv', index=False)
+# df.to_csv(Path('.') / 'data' / 'glove_vectors_300k.csv', index=False)
 
 # %%
 # Split the data into training and testing sets
