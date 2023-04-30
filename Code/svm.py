@@ -88,7 +88,7 @@ def load_bert_nela(bert=True):
         
     return df
 
-df = load_bert_nela(bert=False)
+df = load_bert_nela(bert=True)
 #%%
 # # Undersample 4, 5 star reviews -> more balanced
 # # Make sum of 4, 5 star reviews equal to sum of 1, 2, 3 star reviews
@@ -209,15 +209,15 @@ logreg.fit(X_train, y_train)
 y_pred_logreg = logreg.predict(X_test)
 print('Logistic regression classification report:\n', classification_report(y_test, y_pred_logreg))
 # %%
-# Multinomial log reg
+# Proportional odds log reg
 def run(y, df, reg=True, grouped=False):
-    formula = y + " ~ " + " + ".join(x) # + " + " + bash_interaction(x[:4])
+    formula = y + " ~ " + " + ".join(map(str, x)) # + " + " + bash_interaction(x[:4])
     mod = smf.mnlogit(formula=formula, data=df)
     res = None
     if reg:
         res = mod.fit_regularized(method="l1", disp=0)
     else:
-        res = mod.fit(method="bfgs", maxiter=1000)
+        res = mod.fit(method="bfgs", maxiter=500, disp=25)
     # significant_vars = res.pvalues[res.pvalues < 0.05].index
     # if 'Intercept' in significant_vars:
     #     significant_vars = significant_vars.drop('Intercept')
@@ -246,8 +246,10 @@ def run_split(df, y_var):
     print(classification_report(y_test, yhat))
 
 x = df.drop(['reviewText', 'overall'], axis=1).columns
+# x = df.drop(['feature_reviewText', 'feature_overall'], axis=1).columns
 # make sure x is str
 y = 'overall'
+# y = 'feature_overall'
 # res = run(y, df, reg=False)
 run_split(df, y)
 # %%
