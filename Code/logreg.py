@@ -16,22 +16,34 @@ from scipy.stats.distributions import chi2
 from scipy.stats.distributions import norm
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report
+
 
 import os
 os.chdir(os.path.join("..", ".."))
 
-#old: die_hos_speed.csv
-raw_feats = pd.read_csv("100_raw_info.csv")
-data = pd.DataFrame(np.loadtxt("100_bert_feats.csv"))
-df = pd.concat([raw_feats, data], axis=1)
-df = df.drop(columns=["Unnamed: 0", "raw_text"])
+#specifiy dataset, then read in appropriate data
+data = "bert"
 
-y = "stars"
-df.columns = ["feat_"+str(c) if c!= y else c for c in df.columns]
-x = list(df.columns)
-x.remove(y)
+if data == "glove":
+    df = pd.read_csv("glove_vectors.csv")
+    df = df.drop(columns=["reviewText"])
+    y = "overall"
+    x = list(df.columns)
+    x.remove(y)
 
+elif data == "bert":
+    raw_feats = pd.read_csv("100_raw_info.csv")
+    data = pd.DataFrame(np.loadtxt("100_bert_feats.csv"))
+    df = pd.concat([raw_feats, data], axis=1)
+    df = df.drop(columns=["Unnamed: 0", "raw_text"])
+
+    y = "stars"
+    df.columns = ["feat_"+str(c) if c!= y else c for c in df.columns]
+    x = list(df.columns)
+    x.remove(y)
 # %%
+#these are a bunch of helper functions to ensure our regression is statistically valid
 def corrmat(df):
     corr_mat = np.corrcoef(df.T)
     plt.rc("figure", figsize=(18, 10))
@@ -104,8 +116,9 @@ def bash_interaction(good_cols):
     return " + ".join(q)
 
 
+#main function to run logreg
 def run(y, df, reg=True, grouped=False):
-    formula = y + " ~ " + " + ".join(x)# + " + " + bash_interaction(x[:4])
+    formula = y + " ~ " + " + ".join(x)
     mod = smf.mnlogit(formula=formula, data=df)
     if reg:
         res = mod.fit_regularized(method="l1", disp=0)
@@ -128,12 +141,17 @@ def run(y, df, reg=True, grouped=False):
 
     return res
 
+
+#run train/test split
 def run_split(df, y_var):
     df_train, df_test = train_test_split(df, test_size=0.2, random_state=42)
-    res = run(y_var, df_train, reg=True, grouped=False)
+    res = run(y_var, df_train, reg=False, grouped=False)
     yhat = res.predict(df_test)
-    acc = accuracy_score(yhat, df_test[y_var])
-    print(acc)
+    yhat = yhat.idxmax(axis=1)
+    yhat = yhat + 1
+    yhat = yhat.astype(int)
+    y_test = df_test[y_var]
+    print(classification_report(y_test, yhat))
 
 
 res = run(y, df)

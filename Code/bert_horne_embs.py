@@ -14,6 +14,7 @@ import os
 #os.chdir("..")
 
 
+#functions for parsing and loading df. provided by the owner of the data repo
 def parse(path):
   g = gzip.open(path, 'r')
   for l in g:
@@ -37,6 +38,9 @@ filter_df = df[["overall", "reviewText"]].dropna()
 text = filter_df.reviewText
 y_vars = filter_df.overall
 
+#functions to extract the featurizations for a single review, given a text t and the required class
+#note the try/accept block, sometimes the code fails. For horne it is because the researchers who wrote the functions had some bugs
+#for bert it is when the tokenizer has bugs -- to my understanding due to malformatted data, like empty / not long enough / too long. 
 def horne_single(nela, t):
     try:
         feature_vector, _ = nela.extract_all(t)
@@ -57,8 +61,8 @@ def bert_single(model, t):
     return out
 
 
-
-target = 100
+#target is number of reviews per class to take (so if target=1000 this will result in a dataset with n=5000)
+target = 1000
 star_count = {x:0 for x in range(1,6)}
 stars = []
 bert_feats = []
@@ -67,13 +71,15 @@ raw_text = []
 
 nela = NELAFeatureExtractor()
 
+#can be changed to cuda, but is faster for non-batched 
 device = torch.device('cpu')
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased') #currently using uncasd -- future work might make this cased
 model = BertModel.from_pretrained("bert-base-uncased").to(device)
 model.eval()
 
+#main loop, run through data until we either run out (which is hard with our millions of points) or hit target for each catagory
 for i,(t,y) in enumerate(zip(text,y_vars)):
-    if i % 100 == 0:
+    if i % 1000 == 0:
        print(i)
        print(star_count)
     horne = horne_single(nela, t)
@@ -87,6 +93,7 @@ for i,(t,y) in enumerate(zip(text,y_vars)):
     if min(star_count.values()) == target:
         break
 
+#combine the features and save to disk
 bert_feats = np.vstack(bert_feats)
 horne_feats = np.vstack(horne_feats)
 raw_info = pd.DataFrame({"stars":stars, "raw_text":raw_text})
