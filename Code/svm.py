@@ -21,7 +21,11 @@ from OrdClass import OrdClass
 from sklearn.metrics import accuracy_score
 import seaborn as sns
 import matplotlib.pyplot as plt
-
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -85,6 +89,7 @@ def load_bert_nela(bert=True):
         df = df.rename(columns={"stars": "overall"})
         # rename rawText to reviewText
         df = df.rename(columns={"raw_text": "reviewText"})
+        df.columns = ["feat_"+str(c) if c not in ['reviewText', 'overall'] else c for c in df.columns]
         
     return df
 
@@ -162,6 +167,8 @@ df_vectors.columns = [f'feature_{str(col)}' for col in df_vectors.columns]
 
 # Concatenate with original dataframe
 df = pd.concat([df, df_vectors], axis=1)
+# concat just orig dataframe reviewText and overall to df_vectors
+df = pd.concat([df[['reviewText', 'overall']], df_vectors], axis=1)
 
 #%%
 # Export to csv
@@ -194,6 +201,7 @@ print('Mord OrdinalRidge classification report:\n', classification_report(y_test
 
 
 # %%
+# Ordinal SVM (A Simple Approach to Ordinal Classification)
 # convert y values to start from 0 (0 -> 4) and convert to int from float
 y_train_ord = (y_train - 1).astype(int)
 y_test_ord = (y_test - 1).astype(int)
@@ -202,6 +210,23 @@ clf = OrdClass(SVC,clf_args={'kernel':'linear', 'probability':True})
 clf.fit(X_train, y_train_ord)
 y_pred_ord = clf.predict(X_test)
 print('Ordinal classification report:\n', classification_report(y_test_ord, y_pred_ord))
+
+#%%
+# confusion matrix
+print(confusion_matrix(y_test_ord, y_pred_ord))
+# visualize confusion matrix heatmap
+# add 1
+y_test_ord = y_test_ord + 1
+y_pred_ord = y_pred_ord + 1
+# label axes
+sns.heatmap(confusion_matrix(y_test_ord, y_pred_ord), annot=True, fmt='g', cmap='Blues')
+plt.xlabel('Predicted label')
+plt.ylabel('True label')
+# x and y axis 1-5
+plt.xticks(np.arange(5) + 0.5, np.arange(5) + 1)
+plt.yticks(np.arange(5) + 0.5, np.arange(5) + 1)
+plt.show()
+
 # %%
 # Multinomial log reg
 logreg = LogisticRegression(multi_class='multinomial', solver='lbfgs')
@@ -217,7 +242,7 @@ def run(y, df, reg=True, grouped=False):
     if reg:
         res = mod.fit_regularized(method="l1", disp=0)
     else:
-        res = mod.fit(method="bfgs", maxiter=500, disp=25)
+        res = mod.fit(method="bfgs", maxiter=500, disp=1)
     # significant_vars = res.pvalues[res.pvalues < 0.05].index
     # if 'Intercept' in significant_vars:
     #     significant_vars = significant_vars.drop('Intercept')
@@ -244,6 +269,14 @@ def run_split(df, y_var):
     yhat = yhat.astype(int)
     y_test = df_test[y_var]
     print(classification_report(y_test, yhat))
+    # visualize confusion matrix
+    sns.heatmap(confusion_matrix(y_test, yhat), annot=True, fmt='g', cmap='Blues')
+    plt.xlabel('Predicted label')
+    plt.ylabel('True label')
+    # x and y axis 1-5
+    plt.xticks(np.arange(5) + 0.5, np.arange(5) + 1)
+    plt.yticks(np.arange(5) + 0.5, np.arange(5) + 1)
+    plt.show()
 
 x = df.drop(['reviewText', 'overall'], axis=1).columns
 # x = df.drop(['feature_reviewText', 'feature_overall'], axis=1).columns
@@ -252,4 +285,38 @@ y = 'overall'
 # y = 'feature_overall'
 # res = run(y, df, reg=False)
 run_split(df, y)
+# %%
+# visualize all vectors in df using t-sne and pca
+tsne = TSNE(n_components=2, random_state=42)
+pca = PCA(n_components=2, random_state=42)
+tsne_results = tsne.fit_transform(df.drop(['reviewText', 'overall'], axis=1))
+pca_results = pca.fit_transform(df.drop(['reviewText', 'overall'], axis=1))
+df['tsne-2d-one'] = tsne_results[:,0]
+df['tsne-2d-two'] = tsne_results[:,1]
+df['pca-2d-one'] = pca_results[:,0]
+df['pca-2d-two'] = pca_results[:,1]
+plt.figure(figsize=(16,10))
+sns.scatterplot(
+    x="tsne-2d-one", y="tsne-2d-two",
+    hue="overall",
+    palette=sns.color_palette("hls", 5),
+    data=df,
+    legend="full",
+    alpha=0.75
+)
+plt.show()
+
+# show pca
+plt.figure(figsize=(16,10))
+sns.scatterplot(
+    x="pca-2d-one", y="pca-2d-two",
+    hue="overall",
+    palette=sns.color_palette("hls", 5),
+    data=df,
+    legend="full",
+    alpha=0.75
+)
+plt.show()
+
+
 # %%
