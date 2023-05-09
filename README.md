@@ -1,2 +1,2 @@
-# Math179 Midterm Prokect
+# Math179 Final Project: Amazon Review Predictions
  
